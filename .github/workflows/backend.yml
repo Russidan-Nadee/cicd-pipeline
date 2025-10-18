@@ -14,9 +14,57 @@ on:
   workflow_dispatch:
 
 jobs:
-  ci:
-    name: CI - Lint, Test & Build
+  install:
+    name: Install Dependencies
     runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: ./backend
+        run: npm ci
+
+      - name: Cache node modules
+        uses: actions/cache@v4
+        with:
+          path: backend/node_modules
+          key: ${{ runner.os }}-node-${{ hashFiles('backend/package-lock.json') }}
+
+  lint:
+    name: Lint Code
+    runs-on: ubuntu-latest
+    needs: install
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Restore cache
+        uses: actions/cache@v4
+        with:
+          path: backend/node_modules
+          key: ${{ runner.os }}-node-${{ hashFiles('backend/package-lock.json') }}
+
+      - name: Lint code
+        working-directory: ./backend
+        run: npm run lint:check
+
+  database-setup:
+    name: Database Setup & Migrations
+    runs-on: ubuntu-latest
+    needs: install
 
     services:
       postgres:
@@ -41,16 +89,12 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: 'npm'
-          cache-dependency-path: backend/package-lock.json
 
-      - name: Install dependencies
-        working-directory: ./backend
-        run: npm ci
-
-      - name: Lint code
-        working-directory: ./backend
-        run: npm run lint:check
+      - name: Restore cache
+        uses: actions/cache@v4
+        with:
+          path: backend/node_modules
+          key: ${{ runner.os }}-node-${{ hashFiles('backend/package-lock.json') }}
 
       - name: Generate Prisma Client
         working-directory: ./backend
@@ -62,11 +106,96 @@ jobs:
           DATABASE_URL: postgresql://testuser:testpass@localhost:5432/testdb
         run: npx prisma migrate deploy
 
-      - name: Run tests
+  unit-tests:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    needs: database-setup
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: testuser
+          POSTGRES_PASSWORD: testpass
+          POSTGRES_DB: testdb
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Restore cache
+        uses: actions/cache@v4
+        with:
+          path: backend/node_modules
+          key: ${{ runner.os }}-node-${{ hashFiles('backend/package-lock.json') }}
+
+      - name: Generate Prisma Client
+        working-directory: ./backend
+        run: npx prisma generate
+
+      - name: Run unit tests
         working-directory: ./backend
         env:
           DATABASE_URL: postgresql://testuser:testpass@localhost:5432/testdb
         run: npm test
+
+      - name: Upload coverage
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: unit-test-coverage
+          path: backend/coverage/
+
+  e2e-tests:
+    name: E2E Tests
+    runs-on: ubuntu-latest
+    needs: database-setup
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: testuser
+          POSTGRES_PASSWORD: testpass
+          POSTGRES_DB: testdb
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Restore cache
+        uses: actions/cache@v4
+        with:
+          path: backend/node_modules
+          key: ${{ runner.os }}-node-${{ hashFiles('backend/package-lock.json') }}
+
+      - name: Generate Prisma Client
+        working-directory: ./backend
+        run: npx prisma generate
 
       - name: Run E2E tests
         working-directory: ./backend
@@ -74,21 +203,51 @@ jobs:
           DATABASE_URL: postgresql://testuser:testpass@localhost:5432/testdb
         run: npm run test:e2e
 
+      - name: Upload E2E coverage
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-test-coverage
+          path: backend/coverage/
+
+  build:
+    name: Build Application
+    runs-on: ubuntu-latest
+    needs: [lint, unit-tests, e2e-tests]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Restore cache
+        uses: actions/cache@v4
+        with:
+          path: backend/node_modules
+          key: ${{ runner.os }}-node-${{ hashFiles('backend/package-lock.json') }}
+
+      - name: Generate Prisma Client
+        working-directory: ./backend
+        run: npx prisma generate
+
       - name: Build project
         working-directory: ./backend
         run: npm run build
 
-      - name: Upload coverage
-        if: always()
+      - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: coverage-report
-          path: backend/coverage/
+          name: build-artifacts
+          path: backend/dist/
 
-  cd:
-    name: CD - Docker Build & Push
+  docker-build:
+    name: Docker Build
     runs-on: ubuntu-latest
-    needs: ci
+    needs: build
     if: success() && github.event_name == 'push' && github.ref == 'refs/heads/main'
 
     steps:
@@ -97,6 +256,56 @@ jobs:
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: russidan/cicd-pipeline-backend
+          tags: |
+            type=ref,event=branch
+            type=sha,prefix={{branch}}-
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./backend
+          push: false
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=registry,ref=russidan/cicd-pipeline-backend:buildcache
+          cache-to: type=registry,ref=russidan/cicd-pipeline-backend:buildcache,mode=max
+          outputs: type=docker,dest=/tmp/image.tar
+
+      - name: Upload Docker image artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: docker-image
+          path: /tmp/image.tar
+          retention-days: 1
+
+  docker-push:
+    name: Docker Push
+    runs-on: ubuntu-latest
+    needs: docker-build
+    if: success() && github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Download Docker image artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: docker-image
+          path: /tmp
+
+      - name: Load Docker image
+        run: docker load --input /tmp/image.tar
 
       - name: Login to Docker Hub
         uses: docker/login-action@v3
@@ -114,12 +323,8 @@ jobs:
             type=sha,prefix={{branch}}-
             type=raw,value=latest,enable={{is_default_branch}}
 
-      - name: Build and push Docker image
-        uses: docker/build-push-action@v5
-        with:
-          context: ./backend
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=registry,ref=russidan/cicd-pipeline-backend:buildcache
-          cache-to: type=registry,ref=russidan/cicd-pipeline-backend:buildcache,mode=max
+      - name: Push Docker image
+        run: |
+          for tag in $(echo "${{ steps.meta.outputs.tags }}" | tr ',' ' '); do
+            docker push $tag
+          done
