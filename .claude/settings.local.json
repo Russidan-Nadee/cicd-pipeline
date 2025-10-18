@@ -1,0 +1,21 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(nest --version)",
+      "Bash(nest new:*)",
+      "Bash(rm:*)",
+      "Bash(npm install:*)",
+      "Bash(npx prisma:*)",
+      "Bash(npm run prisma:seed:*)",
+      "Bash(nest g resource:*)",
+      "Bash(npm run start:dev:*)",
+      "Bash(npx tsc:*)",
+      "Bash(npm run test:*)",
+      "Bash(find:*)",
+      "Bash(tree:*)",
+      "Bash(git add:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
