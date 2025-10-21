@@ -5,7 +5,6 @@ import { PrismaService } from '../../src/prisma.service';
 
 describe('ItemsService', () => {
   let service: ItemsService;
-  let prisma: PrismaService;
 
   const mockPrismaService = {
     item: {
@@ -29,7 +28,6 @@ describe('ItemsService', () => {
     }).compile();
 
     service = module.get<ItemsService>(ItemsService);
-    prisma = module.get<PrismaService>(PrismaService);
   });
 
   afterEach(() => {
@@ -43,13 +41,18 @@ describe('ItemsService', () => {
   describe('create', () => {
     it('should create a new item', async () => {
       const createItemDto = { item: 'test item' };
-      const mockItem = { id: 1, item: 'test item', createdAt: new Date(), updatedAt: new Date() };
+      const mockItem = {
+        id: 1,
+        item: 'test item',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
 
       mockPrismaService.item.create.mockResolvedValue(mockItem);
 
       const result = await service.create(createItemDto);
 
-      expect(prisma.item.create).toHaveBeenCalledWith({
+      expect(mockPrismaService.item.create).toHaveBeenCalledWith({
         data: createItemDto,
       });
       expect(result).toEqual(mockItem);
@@ -67,20 +70,25 @@ describe('ItemsService', () => {
 
       const result = await service.findAll();
 
-      expect(prisma.item.findMany).toHaveBeenCalled();
+      expect(mockPrismaService.item.findMany).toHaveBeenCalled();
       expect(result).toEqual(mockItems);
     });
   });
 
   describe('findOne', () => {
     it('should return a single item', async () => {
-      const mockItem = { id: 1, item: 'test item', createdAt: new Date(), updatedAt: new Date() };
+      const mockItem = {
+        id: 1,
+        item: 'test item',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
 
       mockPrismaService.item.findUnique.mockResolvedValue(mockItem);
 
       const result = await service.findOne(1);
 
-      expect(prisma.item.findUnique).toHaveBeenCalledWith({
+      expect(mockPrismaService.item.findUnique).toHaveBeenCalledWith({
         where: { id: 1 },
       });
       expect(result).toEqual(mockItem);
@@ -90,21 +98,28 @@ describe('ItemsService', () => {
       mockPrismaService.item.findUnique.mockResolvedValue(null);
 
       await expect(service.findOne(999)).rejects.toThrow(NotFoundException);
-      await expect(service.findOne(999)).rejects.toThrow('Item with ID 999 not found');
+      await expect(service.findOne(999)).rejects.toThrow(
+        'Item with ID 999 not found',
+      );
     });
   });
 
   describe('update', () => {
     it('should update an item', async () => {
       const updateItemDto = { item: 'updated item' };
-      const mockItem = { id: 1, item: 'updated item', createdAt: new Date(), updatedAt: new Date() };
+      const mockItem = {
+        id: 1,
+        item: 'updated item',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
 
       mockPrismaService.item.findUnique.mockResolvedValue(mockItem);
       mockPrismaService.item.update.mockResolvedValue(mockItem);
 
       const result = await service.update(1, updateItemDto);
 
-      expect(prisma.item.update).toHaveBeenCalledWith({
+      expect(mockPrismaService.item.update).toHaveBeenCalledWith({
         where: { id: 1 },
         data: updateItemDto,
       });
@@ -114,21 +129,30 @@ describe('ItemsService', () => {
     it('should throw NotFoundException when item not found', async () => {
       mockPrismaService.item.findUnique.mockResolvedValue(null);
 
-      await expect(service.update(999, { item: 'test' })).rejects.toThrow(NotFoundException);
-      await expect(service.update(999, { item: 'test' })).rejects.toThrow('Item with ID 999 not found');
+      await expect(service.update(999, { item: 'test' })).rejects.toThrow(
+        NotFoundException,
+      );
+      await expect(service.update(999, { item: 'test' })).rejects.toThrow(
+        'Item with ID 999 not found',
+      );
     });
   });
 
   describe('remove', () => {
     it('should delete an item', async () => {
-      const mockItem = { id: 1, item: 'test item', createdAt: new Date(), updatedAt: new Date() };
+      const mockItem = {
+        id: 1,
+        item: 'test item',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
 
       mockPrismaService.item.findUnique.mockResolvedValue(mockItem);
       mockPrismaService.item.delete.mockResolvedValue(mockItem);
 
       const result = await service.remove(1);
 
-      expect(prisma.item.delete).toHaveBeenCalledWith({
+      expect(mockPrismaService.item.delete).toHaveBeenCalledWith({
         where: { id: 1 },
       });
       expect(result).toEqual(mockItem);
@@ -138,7 +162,9 @@ describe('ItemsService', () => {
       mockPrismaService.item.findUnique.mockResolvedValue(null);
 
       await expect(service.remove(999)).rejects.toThrow(NotFoundException);
-      await expect(service.remove(999)).rejects.toThrow('Item with ID 999 not found');
+      await expect(service.remove(999)).rejects.toThrow(
+        'Item with ID 999 not found',
+      );
     });
   });
 });

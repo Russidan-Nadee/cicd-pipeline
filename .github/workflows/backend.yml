@@ -111,7 +111,7 @@ jobs:
   unit-tests:
     name: Unit Tests
     runs-on: ubuntu-latest
-    needs: database-setup
+    needs: [database-setup, lint]
     if: success()
 
     services:
@@ -164,7 +164,7 @@ jobs:
   e2e-tests:
     name: E2E Tests
     runs-on: ubuntu-latest
-    needs: database-setup
+    needs: [database-setup, lint]
     if: success()
 
     services:

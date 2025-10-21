@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
-import * as request from 'supertest';
+import request from 'supertest';
 import { AppModule } from '../../src/app.module';
 
 describe('ItemsController (e2e)', () => {
@@ -21,74 +21,89 @@ describe('ItemsController (e2e)', () => {
   });
 
   describe('/items (GET)', () => {
-    it('should return an array of items', () => {
-      return request(app.getHttpServer())
+    it('should return an array of items', async () => {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+      const response = await request(app.getHttpServer())
         .get('/items')
-        .expect(200)
-        .expect((res) => {
-          expect(Array.isArray(res.body)).toBe(true);
-        });
+        .expect(200);
+
+      expect(Array.isArray(response.body)).toBe(true);
     });
   });
 
   describe('/items (POST)', () => {
-    it('should create a new item', () => {
-      return request(app.getHttpServer())
+    it('should create a new item', async () => {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+      const response = await request(app.getHttpServer())
         .post('/items')
         .send({ item: 'test e2e item' })
-        .expect(201)
-        .expect((res) => {
-          expect(res.body).toHaveProperty('id');
-          expect(res.body.item).toBe('test e2e item');
-        });
+        .expect(201);
+
+      expect(response.body).toHaveProperty('id');
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+      expect(response.body.item).toBe('test e2e item');
     });
   });
 
   describe('/items/:id (GET)', () => {
     it('should return a single item', async () => {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
       const created = await request(app.getHttpServer())
         .post('/items')
         .send({ item: 'test item for get' });
 
-      return request(app.getHttpServer())
-        .get(`/items/${created.body.id}`)
-        .expect(200)
-        .expect((res) => {
-          expect(res.body.id).toBe(created.body.id);
-          expect(res.body.item).toBe('test item for get');
-        });
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+      const createdId = created.body.id as string;
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+      const response = await request(app.getHttpServer())
+        .get(`/items/${createdId}`)
+        .expect(200);
+
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+      expect(response.body.id).toBe(created.body.id);
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+      expect(response.body.item).toBe('test item for get');
     });
   });
 
   describe('/items/:id (PATCH)', () => {
     it('should update an item', async () => {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
       const created = await request(app.getHttpServer())
         .post('/items')
         .send({ item: 'item to update' });
 
-      return request(app.getHttpServer())
-        .patch(`/items/${created.body.id}`)
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+      const createdId = created.body.id as string;
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+      const response = await request(app.getHttpServer())
+        .patch(`/items/${createdId}`)
         .send({ item: 'updated item' })
-        .expect(200)
-        .expect((res) => {
-          expect(res.body.id).toBe(created.body.id);
-          expect(res.body.item).toBe('updated item');
-        });
+        .expect(200);
+
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+      expect(response.body.id).toBe(created.body.id);
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+      expect(response.body.item).toBe('updated item');
     });
   });
 
   describe('/items/:id (DELETE)', () => {
     it('should delete an item', async () => {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
       const created = await request(app.getHttpServer())
         .post('/items')
         .send({ item: 'item to delete' });
 
-      return request(app.getHttpServer())
-        .delete(`/items/${created.body.id}`)
-        .expect(200)
-        .expect((res) => {
-          expect(res.body.id).toBe(created.body.id);
-        });
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+      const createdId = created.body.id as string;
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+      const response = await request(app.getHttpServer())
+        .delete(`/items/${createdId}`)
+        .expect(200);
+
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+      expect(response.body.id).toBe(created.body.id);
     });
   });
 });
