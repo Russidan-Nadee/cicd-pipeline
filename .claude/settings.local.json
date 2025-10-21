@@ -13,7 +13,12 @@
       "Bash(npm run test:*)",
       "Bash(find:*)",
       "Bash(tree:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$(cat <<''EOF''\nfeat: add GitHub Actions CI/CD workflow with Docker support\n\n- Add backend.yml workflow with CI and CD jobs\n- CI: lint, test, build with PostgreSQL service\n- CD: build Docker image and push to Docker Hub\n- Add multi-stage Dockerfile for production\n- Add .dockerignore for build optimization\n- Trigger only on backend changes\n- Auto-tag images: latest, main, main-{sha}\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")",
+      "Bash(git push:*)",
+      "Bash(git commit:*)",
+      "Bash(npm run lint)",
+      "Bash(npm test)"
     ],
     "deny": [],
     "ask": []
