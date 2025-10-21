@@ -148,6 +148,12 @@ jobs:
         working-directory: ./backend
         run: npx prisma generate
 
+      - name: Run migrations
+        working-directory: ./backend
+        env:
+          DATABASE_URL: postgresql://testuser:testpass@localhost:5432/testdb
+        run: npx prisma migrate deploy
+
       - name: Run unit tests
         working-directory: ./backend
         env:
@@ -200,6 +206,12 @@ jobs:
       - name: Generate Prisma Client
         working-directory: ./backend
         run: npx prisma generate
+
+      - name: Run migrations
+        working-directory: ./backend
+        env:
+          DATABASE_URL: postgresql://testuser:testpass@localhost:5432/testdb
+        run: npx prisma migrate deploy
 
       - name: Run E2E tests
         working-directory: ./backend
