@@ -11,7 +11,7 @@ export default function globalSetup() {
         cwd: process.cwd(),
         stdio: 'inherit',
       });
-    } catch (generateError) {
+    } catch {
       // On Windows, prisma generate might fail due to file locking
       // This is okay if the client is already generated
       console.log('Prisma Client generation skipped (may already exist)');
